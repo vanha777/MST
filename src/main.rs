@@ -1,74 +1,177 @@
-use mpl_token_metadata::{
-    instructions::{UpdateV1, UpdateV1InstructionArgs},
-    types::{CollectionDetailsToggle, CollectionToggle, Creator, RuleSetToggle, UsesToggle},
-    ID as TOKEN_METADATA_PROGRAM_ID,
-};
+use anyhow::Result;
 use solana_client::rpc_client::RpcClient;
-use solana_program::system_program;
 use solana_sdk::{
+    commitment_config::CommitmentConfig,
     pubkey::Pubkey,
-    signer::{keypair::Keypair, Signer},
+    signature::{read_keypair_file, Keypair},
+    signer::Signer,
+    system_instruction,
     transaction::Transaction,
 };
-use std::{io, str::FromStr};
-pub mod lib;
+use std::str::FromStr;
+mod instruction;
+use instruction::RegistryInstruction;
+use borsh::{BorshDeserialize, BorshSerialize};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Choose network:");
-    println!("1. Devnet");
-    println!("2. Testnet"); 
-    println!("3. Mainnet");
+#[derive(BorshSerialize, BorshDeserialize, Debug, Default)]
+pub struct RegistryData {
+    pub is_initialized: bool,
+    pub admin: Pubkey,
+    pub game_studios: Vec<Pubkey>,
+}
 
-    let mut network_choice = String::new();
-    io::stdin().read_line(&mut network_choice)?;
+fn main() -> Result<()> {
+    println!("\x1b[38;5;39mdebug\x1b[0m \x1b[38;5;208m0\x1b[0m");
+    // Connect to testnet
+    let rpc_url = "https://api.testnet.solana.com".to_string();
+    let client = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
-    let rpc_url = match network_choice.trim() {
-        "1" => "https://api.devnet.solana.com",
-        "2" => "https://api.testnet.solana.com",
-        "3" => "https://api.mainnet-beta.solana.com",
-        _ => {
-            println!("Invalid choice, defaulting to devnet");
-            "https://api.devnet.solana.com"
-        }
-    };
-    let client = RpcClient::new(rpc_url);
+    // Load your keypair
+    let payer = read_keypair_file("./admin_account.json").unwrap();
+    println!("Using keypair: {}", payer.pubkey());
 
-    // Load the payer's keypair
-    let payer =
-        <solana_sdk::signature::Keypair as solana_sdk::signer::EncodableKey>::read_from_file(
-            "/Users/copycoder/metaloot-keypair.json",
-        )?;
+    // Your program ID (replace with your deployed program ID)
+    let program_id = Pubkey::from_str("2Q4gtDRgjPFGypoyXGCZpmXNzv9u9L1xUuUzn3KMcA12")?;
+    println!("\x1b[38;5;39mdebug 2 \x1b[0m \x1b[38;5;208m0\x1b[0m");
+    // Sucessfull !
+    // Example: Initialize Registry
+    // initialize_registry(&client, &payer, &program_id)?;
 
-    println!("Please enter the mint address:");
-    let mut mint_address_input = String::new();
-    io::stdin().read_line(&mut mint_address_input)?;
-    let mint_address = Pubkey::from_str(mint_address_input.trim())?;
+    // Example: Create Game Studio
+    // create_game_studio(
+    //     &client,
+    //     &payer,
+    //     &program_id,
+    //     "My Game Studio",
+    //     "MGS",
+    //     "https://example.com/metadata.json",
+    // )?;
 
-    // Derive Metadata PDA
-    let metadata_pda = Pubkey::find_program_address(
-        &[
-            b"metadata",
-            TOKEN_METADATA_PROGRAM_ID.as_ref(),
-            mint_address.as_ref(),
-        ],
-        &TOKEN_METADATA_PROGRAM_ID,
-    )
-    .0;
-
-    println!("Metadata PDA: {}", metadata_pda);
-
-    println!("Choose operation:");
-    println!("1. Create Metadata");
-    println!("2. Update Metadata");
-    
-    let mut choice = String::new();
-    io::stdin().read_line(&mut choice)?;
-
-    match choice.trim() {
-        "1" => lib::get_json_key(&client, &payer, mint_address, metadata_pda)?,
-        "2" => lib::update_nfts_collection(&client, &payer, mint_address, metadata_pda)?,
-        _ => println!("Invalid choice"),
+    // Read registry data
+    match get_registry_data(&client, &program_id) {
+        Ok(data) => println!("\nSuccessfully read registry data: {:?}", data),
+        Err(e) => println!("Error reading registry data: {}", e),
     }
 
     Ok(())
+}
+
+fn initialize_registry(client: &RpcClient, payer: &Keypair, program_id: &Pubkey) -> Result<()> {
+    println!("\x1b[38;5;39mdebug 3 \x1b[0m \x1b[38;5;208m0\x1b[0m");
+    let (registry_pda, _) = Pubkey::find_program_address(&[b"registry"], program_id);
+
+    let instruction = solana_sdk::instruction::Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                solana_sdk::system_program::id(),
+                false,
+            ),
+            solana_sdk::instruction::AccountMeta::new(registry_pda, false),
+        ],
+        data: borsh::BorshSerialize::try_to_vec(&RegistryInstruction::InitializeRegistry)?,
+    };
+    println!("\x1b[38;5;39mdebug 4 \x1b[0m \x1b[38;5;208m0\x1b[0m");
+    let recent_blockhash = client.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&payer.pubkey()),
+        &[payer],
+        recent_blockhash,
+    );
+    println!("\x1b[38;5;39mdebug 5 \x1b[0m \x1b[38;5;208m0\x1b[0m");
+    let signature = client.send_and_confirm_transaction(&transaction)?;
+    println!("Initialize Registry transaction signature: {}", signature);
+    Ok(())
+}
+
+fn create_game_studio(
+    client: &RpcClient,
+    payer: &Keypair,
+    program_id: &Pubkey,
+    name: &str,
+    symbol: &str,
+    uri: &str,
+) -> Result<()> {
+    let (registry_pda, _) = Pubkey::find_program_address(&[b"registry"], program_id);
+    let mint = Keypair::new();
+
+    let instruction = solana_sdk::instruction::Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(registry_pda, false),
+            solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new(mint.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                solana_sdk::system_program::id(),
+                false,
+            ),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                solana_sdk::sysvar::rent::id(),
+                false,
+            ),
+            solana_sdk::instruction::AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: borsh::BorshSerialize::try_to_vec(&RegistryInstruction::CreateGameStudio {
+            name: name.to_string(),
+            symbol: symbol.to_string(),
+            uri: uri.to_string(),
+        })?,
+    };
+
+    let recent_blockhash = client.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&payer.pubkey()),
+        &[payer, &mint],
+        recent_blockhash,
+    );
+
+    let signature = client.send_and_confirm_transaction(&transaction)?;
+    println!("Create Game Studio transaction signature: {}", signature);
+    println!("Created mint: {}", mint.pubkey());
+    Ok(())
+}
+
+fn get_registry_data(client: &RpcClient, program_id: &Pubkey) -> Result<RegistryData> {
+    let (registry_pda, _) = Pubkey::find_program_address(&[b"registry"], program_id);
+    
+    // Fetch the account data
+    let account = client.get_account(&registry_pda)?;
+    
+    // First 32 bytes are the admin pubkey
+    let admin = Pubkey::new(&account.data[0..32]);
+    
+    // Next byte is is_initialized
+    let is_initialized = account.data[32] == 1;
+    
+    // Next 4 bytes are the vector length (u32)
+    let vec_len = u32::from_le_bytes(account.data[33..37].try_into().unwrap()) as usize;
+    
+    // Remaining bytes are the game studios vector (each entry is 32 bytes)
+    let mut game_studios = Vec::with_capacity(vec_len);
+    for i in 0..vec_len {
+        let start = 37 + (i * 32);
+        let end = start + 32;
+        if end <= account.data.len() {
+            game_studios.push(Pubkey::new(&account.data[start..end]));
+        }
+    }
+
+    let registry_data = RegistryData {
+        is_initialized,
+        admin,
+        game_studios,
+    };
+
+    println!("\nParsed Registry Data:");
+    println!("Initialized: {}", registry_data.is_initialized);
+    println!("Admin: {}", registry_data.admin);
+    println!("Game Studios (len={}): {:?}", 
+        registry_data.game_studios.len(),
+        registry_data.game_studios
+    );
+
+    Ok(registry_data)
 }
