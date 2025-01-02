@@ -1,0 +1,17 @@
+{
+    "name": "MetaLoot Token",
+    "symbol": "MTL",
+    "description": "MetaLoot - Bridge Between Gaming and Reality.",
+    "image": "https://tzqzzuafkobkhygtccse.supabase.co/storage/v1/object/public/biz_touch/crypto-ql/testNetLogo.png",
+    "attributes": [],
+    "properties": {
+      "category": "token",
+      "creators": [
+        {
+          "address": "GA4jV9ESNBwjxQKs6HgoSebTFTMztacZPCYv8NCs8y8J",
+          "share": 100
+        }
+      ]
+    }
+  }
+  

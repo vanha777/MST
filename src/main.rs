@@ -65,8 +65,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     io::stdin().read_line(&mut choice)?;
 
     match choice.trim() {
-        "1" => lib::create_metadata(&client, &payer, mint_address, metadata_pda)?,
-        "2" => lib::update(&client, &payer, mint_address, metadata_pda)?,
+        "1" => lib::get_json_key(&client, &payer, mint_address, metadata_pda)?,
+        "2" => lib::update_nfts_collection(&client, &payer, mint_address, metadata_pda)?,
         _ => println!("Invalid choice"),
     }
 

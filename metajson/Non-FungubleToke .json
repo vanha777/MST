@@ -1,0 +1,46 @@
+{
+    "name": "MetaLian First Lander",
+    "symbol": "MFL",
+    "description": "MetaLian - Who Lands First, Lands All.",
+    "image": "https://tzqzzuafkobkhygtccse.supabase.co/storage/v1/object/public/biz_touch/crypto-ql/rb_27087.png",
+    "collection": {
+      "name": "MetaForge Rewards Collection",
+      "family": "Metalian Dawn",
+      "key": "53pYFioA1nhDoLrM8rGJFN4r8J1p1pmHstcchvjEng2h",
+      "verified": false
+    },
+    "attributes": [
+      {
+        "trait_type": "Purpose",
+        "value": "Regconition for First Lander"
+      },
+      {
+        "trait_type": "Recognition",
+        "value": "First Lander"
+      },
+      {
+        "trait_type": "Special Role",
+        "value": "MetaLian First Lander"
+      },
+      {
+        "trait_type": "Eligibility",
+        "value": "Active Community Member"
+      }
+    ],
+    "properties": {
+      "category": "image",
+      "creators": [
+        {
+          "address": "GA4jV9ESNBwjxQKs6HgoSebTFTMztacZPCYv8NCs8y8J",
+          "share": 100
+        }
+      ],
+      "files": [
+        {
+          "uri": "https://tzqzzuafkobkhygtccse.supabase.co/storage/v1/object/public/biz_touch/crypto-ql/rb_27087.png",
+          "type": "image/png"
+        }
+      ]
+    }
+  }
+  

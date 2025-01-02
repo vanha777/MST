@@ -1,0 +1,43 @@
+{
+  "name": "MetaForge Rewards Collection",
+  "symbol": "MFR",
+  "description": "MetaForge - Bridging Gaming and Reality with Exclusive Rewards.",
+  "image": "https://tzqzzuafkobkhygtccse.supabase.co/storage/v1/object/public/biz_touch/crypto-ql/nftcol.png",
+  "external_url": "https://www.metaloot.app/",
+  "collection_details": {
+    "size": 100
+  },
+  "attributes": [
+    {
+      "trait_type": "Purpose",
+      "value": "Rewards for Contributors"
+    },
+    {
+      "trait_type": "Recognition",
+      "value": "Contributor"
+    },
+    {
+      "trait_type": "Special Role",
+      "value": "MetaLoot Builder"
+    },
+    {
+      "trait_type": "Eligibility",
+      "value": "Active Community Member"
+    }
+  ],
+  "properties": {
+    "category": "image",
+    "creators": [
+      {
+        "address": "GA4jV9ESNBwjxQKs6HgoSebTFTMztacZPCYv8NCs8y8J",
+        "share": 100
+      }
+    ],
+    "files": [
+      {
+        "uri": "https://tzqzzuafkobkhygtccse.supabase.co/storage/v1/object/public/biz_touch/crypto-ql/nftcol.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}

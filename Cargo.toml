@@ -9,5 +9,6 @@ solana-sdk = "2.1.4"
 mpl-token-metadata = "5.1.0"
 borsh = "1.5.3"
 solana-client = "2.1.4" # Ensure this version matches your Solana SDK version
+spl-token = "7.0.0"
 
 
