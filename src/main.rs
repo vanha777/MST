@@ -15,12 +15,15 @@ use std::str::FromStr;
 mod instruction;
 use borsh::{BorshDeserialize, BorshSerialize};
 use spl_token;
+
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct GameRegistryMetadata {
-    pub name: String,
-    pub symbol: String,
+    pub name: String,   // Game name
+    pub symbol: String, // Game symbol or short identifier
     pub uri: String,
-    pub creator: Pubkey,
+    pub creator: Pubkey,        // Game admin's public key
+    pub native_token: Pubkey,   // Game admin's public key
+    pub nft_collection: Pubkey, // Game admin's public key
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -29,6 +32,7 @@ pub struct RegistryData {
     pub admin: Pubkey,
     pub game_studios: Vec<Pubkey>,
 }
+
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct UpdateGameRegistryMetadata {
     pub name: Option<String>,   // Game name
@@ -48,6 +52,9 @@ pub enum RegistryInstruction {
 
     // /// Update an existing game studio NFT's metadata.
     UpdateGameStudio(GameRegistryMetadata),
+
+    // Create mint for game studio
+    CreateMint,
 }
 
 fn main() -> Result<()> {
@@ -55,7 +62,7 @@ fn main() -> Result<()> {
     println!("\x1b[1;33mAvailable commands:\x1b[0m");
     println!("\x1b[1;32m  create-studio   - Create a new game studio (requires: token_mint, name, symbol, uri)\x1b[0m");
     println!("\x1b[1;32m  update-studio   - Update a game studio (requires: token_mint, name, symbol, uri)\x1b[0m");
-    println!("\x1b[1;32m  read            - Read registry data\x1b[0m");
+    println!("\x1b[1;32m  create-mint     - Create mint for game studio\x1b[0m");
     println!("\x1b[1;32m  list-studios    - List all game studios\x1b[0m");
     println!("\n\x1b[1;35mPlease enter a command:\x1b[0m");
 
@@ -73,7 +80,7 @@ fn main() -> Result<()> {
     println!("Using keypair: {}", payer.pubkey());
 
     // Program ID
-    let program_id = Pubkey::from_str("Dde56tSF9q1iepWVoFg2HEGPEWhVPpgsYqKztUEU69n1")?;
+    let program_id = Pubkey::from_str("FcC6do8RMq7GXYQiKQNjquvxr9M6ohDtJnbsHDmmYsYd")?;
 
     // Parse command
     if args.is_empty() {
@@ -102,6 +109,24 @@ fn main() -> Result<()> {
                 let mut uri = String::new();
                 std::io::stdin().read_line(&mut uri)?;
 
+                println!("Native Token Address (Pubkey, or press enter to skip): ");
+                let mut native_token_address = String::new();
+                std::io::stdin().read_line(&mut native_token_address)?;
+                let native_token = if native_token_address.trim().is_empty() {
+                    Pubkey::default()
+                } else {
+                    Pubkey::from_str(native_token_address.trim())?
+                };
+
+                println!("NFT Collection Address (Pubkey, or press enter to skip): ");
+                let mut nft_collection_address = String::new();
+                std::io::stdin().read_line(&mut nft_collection_address)?;
+                let nft_collection = if nft_collection_address.trim().is_empty() {
+                    Pubkey::default()
+                } else {
+                    Pubkey::from_str(nft_collection_address.trim())?
+                };
+
                 println!("Creating game studio...");
                 create_game_studio(
                     &client,
@@ -111,6 +136,8 @@ fn main() -> Result<()> {
                     name.trim(),
                     symbol.trim(),
                     uri.trim(),
+                    &native_token,
+                    &nft_collection,
                 )?;
             } else {
                 let token_mint = Pubkey::from_str(&args[1])?;
@@ -122,8 +149,18 @@ fn main() -> Result<()> {
                     &args[2],
                     &args[3],
                     &args[4],
+                    &Pubkey::default(),
+                    &Pubkey::default(),
                 )?;
             }
+        }
+        "create-mint" => {
+            println!("Please enter the following details to create mint:");
+            println!("Game Studio PDA (Pubkey): ");
+            let mut game_studio_pda = String::new();
+            std::io::stdin().read_line(&mut game_studio_pda)?;
+            let game_studio_pda = Pubkey::from_str(game_studio_pda.trim())?;
+            create_mint(&client, &payer, &program_id, &game_studio_pda)?;
         }
         "update-studio" => {
             if args.len() < 5 {
@@ -160,8 +197,36 @@ fn main() -> Result<()> {
                     Some(uri.trim().to_string())
                 };
 
+                println!("Native Token Address (Pubkey, or press enter to skip): ");
+                let mut token_native = String::new();
+                std::io::stdin().read_line(&mut token_native)?;
+                let native_token = if token_native.trim().is_empty() {
+                    Pubkey::default()
+                } else {
+                    Pubkey::from_str(token_native.trim())?
+                };
+
+                println!("NFT Collection Address (Pubkey, or press enter to skip): ");
+                let mut nft_mint = String::new();
+                std::io::stdin().read_line(&mut nft_mint)?;
+                let nft_collection = if nft_mint.trim().is_empty() {
+                    Pubkey::default()
+                } else {
+                    Pubkey::from_str(nft_mint.trim())?
+                };
+
                 println!("Updating game studio...");
-                update_game_studio(&client, &payer, &program_id, &token_mint, name, symbol, uri)?;
+                update_game_studio(
+                    &client,
+                    &payer,
+                    &program_id,
+                    &token_mint,
+                    name,
+                    symbol,
+                    uri,
+                    native_token,
+                    nft_collection,
+                )?;
             } else {
                 let token_mint = Pubkey::from_str(&args[1])?;
                 update_game_studio(
@@ -172,6 +237,8 @@ fn main() -> Result<()> {
                     Some(args[2].clone()),
                     Some(args[3].clone()),
                     Some(args[4].clone()),
+                    Pubkey::default(),
+                    Pubkey::default(),
                 )?;
             }
         }
@@ -187,7 +254,7 @@ fn main() -> Result<()> {
             }
         }
         _ => {
-            println!("Unknown command. Available commands: create-studio, update-studio, read, list-studios");
+            println!("Unknown command. Available commands: create-studio, update-studio, create-mint, read, list-studios");
         }
     }
 
@@ -202,28 +269,13 @@ fn create_game_studio(
     name: &str,
     symbol: &str,
     uri: &str,
+    native_token: &Pubkey,
+    nft_collection: &Pubkey,
 ) -> Result<()> {
     println!("\x1b[1;36mCreating game studio with:\x1b[0m");
     println!("\x1b[1;33mName: {}\x1b[0m", name);
     println!("\x1b[1;33mSymbol: {}\x1b[0m", symbol);
     println!("\x1b[1;33mURI: {}\x1b[0m", uri);
-
-    // First verify registry exists and is initialized
-    // let (registry_pda, _) = Pubkey::find_program_address(&[b"registry"], program_id);
-    // println!("\x1b[1;35mRegistry PDA: {}\x1b[0m", registry_pda);
-
-    // Verify registry is initialized
-    // match client.get_account(&registry_pda) {
-    //     Ok(account) => {
-    //         let registry_data: RegistryData = borsh::from_slice(&account.data)?;
-    //         println!("\x1b[1;34mRegistry initialized: {}\x1b[0m", registry_data.is_initialized);
-    //         println!("\x1b[1;34mRegistry admin: {}\x1b[0m", registry_data.admin);
-    //     }
-    //     Err(e) => {
-    //         println!("\x1b[1;31mFailed to fetch registry account: {}\x1b[0m", e);
-    //         return Err(anyhow::anyhow!("Registry account not found"));
-    //     }
-    // }
 
     let entry_seeds = &[b"registry", token_mint.as_ref()];
     let (entry_pda, bump) = Pubkey::find_program_address(entry_seeds, program_id);
@@ -235,6 +287,8 @@ fn create_game_studio(
         symbol: symbol.to_string(),
         uri: uri.to_string(),
         creator: payer.pubkey(),
+        native_token: *native_token,
+        nft_collection: *nft_collection,
     });
     let serialized_instruction = borsh::to_vec(&instruction_data)?;
     println!(
@@ -245,7 +299,6 @@ fn create_game_studio(
     let instruction = solana_sdk::instruction::Instruction {
         program_id: *program_id,
         accounts: vec![
-            // solana_sdk::instruction::AccountMeta::new(registry_pda, false),
             solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
             solana_sdk::instruction::AccountMeta::new_readonly(
                 solana_sdk::system_program::id(),
@@ -282,6 +335,60 @@ fn create_game_studio(
     }
 }
 
+fn create_mint(
+    client: &RpcClient,
+    payer: &Keypair,
+    program_id: &Pubkey,
+    game_studio_pda: &Pubkey,
+) -> Result<()> {
+    // Generate new keypair for mint
+    let mint_keypair = Keypair::new();
+
+    let instruction = solana_sdk::instruction::Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new(mint_keypair.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new(*game_studio_pda, false),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                solana_sdk::system_program::id(),
+                false,
+            ),
+            solana_sdk::instruction::AccountMeta::new_readonly(spl_token::id(), false),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                solana_sdk::sysvar::rent::id(),
+                false,
+            ),
+        ],
+        data: borsh::to_vec(&RegistryInstruction::CreateMint)?,
+    };
+
+    let recent_blockhash = client.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&payer.pubkey()),
+        &[payer, &mint_keypair],
+        recent_blockhash,
+    );
+
+    println!("\x1b[1;32mSending transaction to create mint...\x1b[0m");
+    match client.send_and_confirm_transaction(&transaction) {
+        Ok(signature) => {
+            println!(
+                "\x1b[1;32mSuccess! Transaction signature: {}\x1b[0m",
+                signature
+            );
+            println!("\x1b[1;32mCreated mint: {}\x1b[0m", mint_keypair.pubkey());
+            Ok(())
+        }
+        Err(e) => {
+            println!("\x1b[1;31mTransaction failed: {}\x1b[0m", e);
+            println!("\x1b[1;31mError details: {:?}\x1b[0m", e);
+            Err(anyhow::anyhow!(e))
+        }
+    }
+}
+
 fn update_game_studio(
     client: &RpcClient,
     payer: &Keypair,
@@ -290,6 +397,8 @@ fn update_game_studio(
     name: Option<String>,
     symbol: Option<String>,
     uri: Option<String>,
+    native_token: Pubkey,
+    nft_collection: Pubkey,
 ) -> Result<()> {
     println!("\x1b[1;36mUpdating game studio with:\x1b[0m");
     if let Some(name) = &name {
@@ -309,9 +418,11 @@ fn update_game_studio(
     // Create instruction data
     let instruction_data = RegistryInstruction::UpdateGameStudio(GameRegistryMetadata {
         name: name.unwrap_or_default(),
-        symbol: symbol.unwrap_or_default(), 
+        symbol: symbol.unwrap_or_default(),
         uri: uri.unwrap_or_default(),
         creator: payer.pubkey(),
+        native_token,
+        nft_collection,
     });
     let serialized_instruction = borsh::to_vec(&instruction_data)?;
     println!(
@@ -368,7 +479,7 @@ fn get_all_game_studios(
         .iter()
         .filter_map(|(pubkey, account)| {
             // Try to deserialize as GameRegistryMetadata
-            match GameRegistryMetadata::try_from_slice(&account.data) {
+            match GameRegistryMetadata::deserialize(&mut &account.data[..]) {
                 Ok(metadata) => {
                     println!(
                         "\x1b[1;34mFound game studio: {} at {}\x1b[0m",
