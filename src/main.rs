@@ -156,11 +156,11 @@ fn main() -> Result<()> {
         }
         "create-mint" => {
             println!("Please enter the following details to create mint:");
-            println!("Game Studio PDA (Pubkey): ");
-            let mut game_studio_pda = String::new();
-            std::io::stdin().read_line(&mut game_studio_pda)?;
-            let game_studio_pda = Pubkey::from_str(game_studio_pda.trim())?;
-            create_mint(&client, &payer, &program_id, &game_studio_pda)?;
+            println!("Token Mint (Pubkey): ");
+            let mut token_mint = String::new();
+            std::io::stdin().read_line(&mut token_mint)?;
+            let token_mint_address = Pubkey::from_str(token_mint.trim())?;
+            create_mint(&client, &payer, &program_id, &token_mint_address)?;
         }
         "update-studio" => {
             if args.len() < 5 {
@@ -339,17 +339,19 @@ fn create_mint(
     client: &RpcClient,
     payer: &Keypair,
     program_id: &Pubkey,
-    game_studio_pda: &Pubkey,
+    token_mint_address: &Pubkey,
 ) -> Result<()> {
-    // Generate new keypair for mint
+    // Generate new keypair for mint account AND make it a signer
     let mint_keypair = Keypair::new();
-
+    let (game_studio_pda, _) = Pubkey::find_program_address(&[b"registry", token_mint_address.as_ref()], program_id);
+    
     let instruction = solana_sdk::instruction::Instruction {
         program_id: *program_id,
         accounts: vec![
             solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
-            solana_sdk::instruction::AccountMeta::new(mint_keypair.pubkey(), true),
-            solana_sdk::instruction::AccountMeta::new(*game_studio_pda, false),
+            solana_sdk::instruction::AccountMeta::new(mint_keypair.pubkey(), true), // Changed to true - needs to be a signer
+            solana_sdk::instruction::AccountMeta::new_readonly(*token_mint_address, false),
+            solana_sdk::instruction::AccountMeta::new(game_studio_pda, false),
             solana_sdk::instruction::AccountMeta::new_readonly(
                 solana_sdk::system_program::id(),
                 false,
@@ -367,7 +369,7 @@ fn create_mint(
     let transaction = Transaction::new_signed_with_payer(
         &[instruction],
         Some(&payer.pubkey()),
-        &[payer, &mint_keypair],
+        &[payer, &mint_keypair],  // Added mint_keypair as a signer
         recent_blockhash,
     );
 
