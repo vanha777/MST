@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_sdk::pubkey::Pubkey;
+use anchor_client::solana_sdk::pubkey::Pubkey;
 
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
